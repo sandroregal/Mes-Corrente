@@ -1,0 +1,17 @@
+{
+  "name": "Desempenho Regionais — Royal FIC",
+  "short_name": "Regionais RFIC",
+  "description": "Desempenho mensal das regionais vs meta e projeção — Royal FIC",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E4C89",
+  "theme_color": "#0E4C89",
+  "lang": "pt-BR",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"icon-maskable.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}
