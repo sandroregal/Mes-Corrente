@@ -162,15 +162,34 @@ footer{text-align:center;font-size:10.5px;color:var(--muted);margin-top:18px;pad
 let DATA = null;
 
 /* ====== CONSTANTES (espelham o cálculo em Python) ====== */
-const REG={FI09:'SP',FI10:'SP',FI13:'SP',FI22:'SP',FI27:'SP',FI01:'MT',FI04:'MT',FI30:'MT',
- FI02:'MS',FI07:'MG',FI14:'MG',FI16:'MG',FI08:'GO',FI17:'BA',FI20:'BA',FI26:'BA',FI39:'BA',FI41:'BA',
- FI24:'MA',FI34:'PE',FI06:'Sul',FI11:'Sul',FI12:'Sul'};
+const REG={FI09:'SP',FI10:'SP',FI13:'SP',FI22:'SP',FI27:'SP',
+ FI07:'MG',FI14:'MG',FI16:'MG',
+ FI02:'MS',
+ FI06:'Sul',FI11:'Sul',FI12:'Sul',
+ FI17:'NE',FI20:'NE',FI26:'NE',FI39:'NE',FI41:'NE',FI24:'NE',FI34:'NE',
+ FI01:'CO',FI04:'CO',FI30:'CO',FI08:'CO'};
 const PROD={101:'Gasolina A',102:'Gasolina C',103:'Gasolina C Adt',109:'Etanol',140:'Diesel S500',
  141:'Diesel S500 Adt',147:'Diesel S10',148:'Diesel S10 Adt'};
-const META={SP:63617,MG:51026,MT:46600,MS:29622,BA:22600,Sul:17014,GO:8134,PE:3800,MA:1000,TO:0};
-const ORDEM=['SP','MG','MT','MS','BA','Sul','GO','MA','PE','TO'];
-const NOMEREG={SP:'São Paulo',MG:'Minas Gerais',MT:'Mato Grosso',MS:'Mato Grosso do Sul',
- BA:'Bahia',Sul:'Sul',GO:'Goiás',MA:'Maranhão',PE:'Pernambuco',TO:'Tocantins'};
+/* Metas 2026 por macro-regional (m³) — estrutura nova (6 macro-regionais, substitui as 10 antigas).
+   NE consolida BA+MA+PE; CO consolida MT+GO. Fonte: METAS_BRASIL_2026.xlsx (aba Meta de Vendas),
+   linhas "Total Regional X" por mês. Selecionado automaticamente pelo mês corrente (M) da base carregada. */
+const METAS_MES={
+ 1:{SP:65800,MG:45731,MS:23547,Sul:16456,NE:18200,CO:43792},
+ 2:{SP:58800,MG:44446,MS:33989,Sul:18689,NE:18593,CO:48812},
+ 3:{SP:67200,MG:50787,MS:28129,Sul:19805,NE:29900,CO:47542},
+ 4:{SP:61600,MG:47205,MS:24612,Sul:19805,NE:29800,CO:44084},
+ 5:{SP:63000,MG:48637,MS:26637,Sul:15898,NE:26200,CO:52114},
+ 6:{SP:64400,MG:51025,MS:29620,Sul:17014,NE:26400,CO:55161},
+ 7:{SP:70000,MG:53638,MS:31538,Sul:15340,NE:26400,CO:55037},
+ 8:{SP:65800,MG:50798,MS:30686,Sul:14224,NE:28200,CO:50201},
+ 9:{SP:64400,MG:49718,MS:23920,Sul:11434,NE:23400,CO:40745},
+ 10:{SP:65800,MG:52135,MS:31059,Sul:14224,NE:23800,CO:46011},
+ 11:{SP:58800,MG:45879,MS:25784,Sul:18912,NE:22500,CO:42748},
+ 12:{SP:64400,MG:49052,MS:22908,Sul:19135,NE:22800,CO:44133}
+};
+const ORDEM=['SP','MG','MS','Sul','NE','CO'];
+const NOMEREG={SP:'São Paulo',MG:'Minas Gerais',MS:'Mato Grosso do Sul',
+ Sul:'Sul',NE:'Nordeste',CO:'Centro-Oeste'};
 const HOL=new Set(['2026-01-01','2026-02-16','2026-02-17','2026-04-03','2026-04-21','2026-05-01',
  '2026-06-04','2026-07-09','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25']);
 const CI={DATA:6,ART:7,ESCR:16,BAND2:23,VOL:24,UMR:33,MREAL:48,IDP:49};
@@ -231,8 +250,9 @@ function recompute(rows){
       atingimento:meta?+(vol/meta).toFixed(4):0,projecao:+(voloper*factor).toFixed(1),
       projMeta:meta?+(voloper*factor/meta).toFixed(4):0,
       ritmoNec:meta?+(Math.max(0,meta-vol)/rest).toFixed(1):0,ritmoAtual:+(voloper/effEl).toFixed(1)};}
-  const metaTot=Object.values(META).reduce((a,b)=>a+b,0);
-  const regs=ORDEM.map(rg=>Object.assign({cod:rg},pack(rg,META[rg])));
+  const metaMes=METAS_MES[M]||{};
+  const metaTot=Object.values(metaMes).reduce((a,b)=>a+b,0);
+  const regs=ORDEM.map(rg=>Object.assign({cod:rg},pack(rg,metaMes[rg]||0)));
   const drill={}; for(const rg of ORDEM) if(A[rg]) drill[rg]={prod:topn(A[rg].prod),seg:topn(A[rg].seg),dia:diaria(A[rg].dia)};
   const win='01-'+String(maxDay).padStart(2,'0')+'/'+['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][M]+'/'+Y;
   return {win:win,asof:String(maxDay).padStart(2,'0')+'.'+String(M).padStart(2,'0')+'.'+Y,
@@ -306,7 +326,7 @@ function renderContent(){
     el.onclick=()=>{ setScope(el.getAttribute('data-reg')); }); }
 }
 function barsRegionais(){
-  const regs=DATA.regionais.filter(r=>r.cod!=='TO' || r.vol>0);
+  const regs=DATA.regionais;
   let valf,bgf,labf,scaleMax;
   if(metric==='vol'){ valf=r=>r.vol; bgf=r=>r.meta; labf=r=>`<b>${nf0.format(r.vol)}</b> m³ · ${pct(r.atingimento)}`; }
   else if(metric==='proj'){ valf=r=>r.projecao; bgf=r=>r.meta; labf=r=>`<b>${nf0.format(r.projecao)}</b> m³ · ${pct(r.projMeta)}`; }
